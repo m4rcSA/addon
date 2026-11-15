@@ -2,6 +2,7 @@
 # --------------------------------------------------------
 # Conector lauchacohete By Alfa development Group
 # --------------------------------------------------------
+from core import urlparse as alfa_urlparse
 from core import httptools
 from core import scrapertools
 from platformcode import logger
@@ -9,11 +10,12 @@ from platformcode import logger
 
 def test_video_exists(page_url):
     logger.info("(page_url='%s')" % page_url)
-    referer = "https://www.pelis182.com/"
+    referer = "https://pelis182.net/"
     global data
     kwargs = {'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 5, 'ignore_response_code': True, 'cf_assistant': False}
     kwargs['headers'] = {'Referer': referer}
     response = httptools.downloadpage(page_url, **kwargs)
+    
     if not response or not response.sucess or "404 - NOT FOUND!" in response.data:
         return False, "[lauchacohete] El fichero no existe o ha sido borrado"
     
@@ -23,7 +25,9 @@ def test_video_exists(page_url):
 
 def get_video_url(page_url, premium=False, user="", password="", video_password=""):
     logger.info("(page_url='%s')" % page_url)
-    referer = "https://barmonrey.com/" #"https://lauchacohete.top/"
+    # El CDN (spark.9bg.net) solo sirve el m3u8 y los subtítulos con el Referer del reproductor
+    host = scrapertools.find_single_match(page_url, r'https?://([^/]+)')
+    referer = alfa_urlparse.build_url(alfa_urlparse.urlunsplit(('https', u'{}'.format(host), "", "", "")), '/') if host else "https://pelis182.net/"
     headers = "|Referer=%s" % referer
     global data
     video_urls = []

@@ -3,6 +3,7 @@
 # -*- Created for Alfa Addon -*-
 # -*- By the Alfa Development Group -*-
 
+from core import urlparse as alfa_urlparse
 import sys
 PY3 = False
 if sys.version_info[0] >= 3: PY3 = True; unicode = str; unichr = chr; long = int; _dict = dict
@@ -33,8 +34,8 @@ debug = config.get_setting('debug_report', default=False)
 canonical = {
              'channel': 'hdfull', 
              'host': config.get_setting("current_host", 'hdfull', default=''), 
-             "host_alt": ["https://hdfull.today/", "https://hdfull.sbs/", "https://hdfull.love/", 
-                          "https://www3.hdfull.one/", "https://hdfull.org/"], 
+             "host_alt": ["https://hdfull.love/", "https://hdfull.today/", "https://hdfull.org/", 
+                          "https://www3.hdfull.one/", "https://hdfull.sbs/"], 
              "host_alt_main": 3, 
              "host_verification": '%slogin', 
              "host_black_list": ["https://hdfull.one/", "https://hd-full.biz/", "https://hdfull.cfd/",
@@ -59,7 +60,7 @@ canonical = {
              'retries_cloudflare': -1 if cf_assistant else 1, 
              'retry_alt': False, 'CF_proxy_alt': False, 'canonical_check': False, 
              'CF': False, 'CF_test': True, 'alfa_s': True, 'renumbertools': False,
-             'data_js': '', 'domains_test': 0, 'Plan_B': True
+             'data_js': '', 'domains_test': 0, 'host_alt_findb': [1, 2, 6]
             }
 host = canonical['host'] or canonical['host_alt'][0]
 host_thumb = 'https://hdfullcdn.cc/'
@@ -470,7 +471,7 @@ def section(item):
         for letra in ['#', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 
                       'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']:
             
-            itemlist.append(item.clone(action="list_all", title=letra, url=item.url + letra.replace('#', '9')))
+            itemlist.append(item.clone(action="list_all", title=letra, url=alfa_urlparse.build_url(item.url, letra.replace('#', '9'))))
 
         return itemlist
 
@@ -592,7 +593,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
                 if not elem.get('permalink', '') and not elem.get('perma', ''): continue
                 elem_json['url'] = AlfaChannel.urljoin(host, '%s' % path + (elem.get('permalink', '') or elem.get('perma', '')))
                 if elem_json['mediatype'] == 'episode':
-                    elem_json['url'] += '/temporada-%s/episodio-%s' % (elem.get('season', '1'), elem.get('episode', '00').zfill(2))
+                    elem_json['url'] = alfa_urlparse.build_url(elem_json['url'], u'/temporada-{}/episodio-{}'.format(elem.get('season', '1'), elem.get('episode', '00').zfill(2)))
                 elem_json['info'] = {elem.get('id', '0'): elem.get('id', '0')}
 
             elif item.extra in ['episodios']:
@@ -625,7 +626,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
 
                 if not elem.get('permalink', '') and not elem.get('perma', ''): continue
                 elem_json['url'] = AlfaChannel.urljoin(host, '%s' % path + (elem.get('permalink', '') or elem.get('perma', '')))
-                elem_json['url'] += '/temporada-%s/episodio-%s' % (elem.get('season', '1'), elem.get('episode', '00').zfill(2))
+                elem_json['url'] = alfa_urlparse.build_url(elem_json['url'], u'/temporada-{}/episodio-{}'.format(elem.get('season', '1'), elem.get('episode', '00').zfill(2)))
                 elem_json['info'] = {elem.get('id', '0'): elem.get('show', {}).get('id', '0')}
 
                 if elem_json['url']:
@@ -842,7 +843,7 @@ def episodesxseason_matches(item, matches_int, **AHkwargs):
 
             if not elem.get('permalink', '') and not elem.get('perma', ''): continue
             elem_json['url'] = AlfaChannel.urljoin(host, '%s' % path + (elem.get('permalink', '') or elem.get('perma', '')))
-            elem_json['url'] += '/temporada-%s/episodio-%s' % (elem.get('season', '1'), elem.get('episode', '00').zfill(2))
+            elem_json['url'] = alfa_urlparse.build_url(elem_json['url'], u'/temporada-{}/episodio-{}'.format(elem.get('season', '1'), elem.get('episode', '00').zfill(2)))
             elem_json['info'] = {elem.get('id', '0'): sid}
 
         except Exception:
@@ -972,6 +973,10 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
 
 
 def play(item):
+    if PY3:
+        from lib import planb_py3 as planb
+    else:
+        from lib import planb
 
     verify_credentials(force_login='timer', force_check=False)
     
@@ -979,6 +984,11 @@ def play(item):
         item.info = {item.url.split("###")[1].split(";")[0]: item.url.split("###")[1].split(";")[0]}
         item.url = item.url.split("###")[0]
     mediatype = '1' if item.contentType == 'tvshow' else '2' if item.contentType == 'movie' else '3' if item.contentType == 'episode' else '4'
+
+    itemlist = planb.play(item)
+    if itemlist and isinstance(itemlist[0], Item):
+        item = itemlist[0]
+
     if item.info and config.get_setting("videolibrary_mark_as_watched"):
         post = "target_id=%s&target_type=%s&target_status=1" % (list(item.info.keys())[0], mediatype)
         
@@ -1024,7 +1034,7 @@ def search(item, texto, **AHkwargs):
         texto = texto.replace(" ", "+")
 
         if not item.post:
-            item.url = item.url + "buscar"
+            item.url = alfa_urlparse.build_url(item.url, 'buscar')
             item.post = '__csrf_magic=%s&menu=search&query=%s' % (sid, texto)
         else:
             item.post = item.post + texto
@@ -1335,9 +1345,13 @@ def verify_domain_alt(url, post=None, headers={}, soup=False, json=False, alfa_s
         for x, host_alt in enumerate(canonical['host_alt']):
             canonical_alt['host'] = host_alt
             canonical_alt['host_alt'] = [host_alt]
+            canonical_alt['host_black_list'] = canonical.get('host_black_list', [])[:]
+            canonical_alt['host_black_list'] += canonical.get('host_alt', [])[:]
+            canonical_alt['host_black_list'].remove(canonical_alt['host'])
             canonical_alt['proxy_retries'] = 1 if x < canonical.get('host_alt_main', 3) else 0
             canonical_alt['retries_cloudflare'] = 0 if x < canonical.get('host_alt_main', 3) else -1
             canonical_alt['canonical_check'] = True if x < canonical.get('host_alt_main', 3) else False
+            canonical_alt['cf_assistant'] = None if x < canonical.get('host_alt_main', 3) else cf_assistant
             canonical_alt['forced_proxy_ifnot_assistant'] = forced_proxy_opt_alt if x < canonical.get('host_alt_main', 3) else None
             retry_alt_alt = True if x < canonical.get('host_alt_main', 3) else False
             headers['Referer'] = host_alt
@@ -1736,7 +1750,7 @@ def find_hidden_seasons(item, matches, sid):
             data = agrupa_datos(url, post=post, json=True, force_check=False, force_login=False, alfa_s=True)
 
             if data and isinstance(data, list):
-                matches.append({'url': url_season + (str(high_season) if high_json_season > 0 else ''), 'info': {sid: sid}, 
+                matches.append({'url': alfa_urlparse.append_path_suffix(url_season, str(high_season) if high_json_season > 0 else ''), 'info': {sid: sid},
                                 'title': item.contentSerieName or item.contentTitle, 'season': high_season})
                 if high_season > tmdb_season: item.infoLabels['number_of_seasons'] = high_season
 

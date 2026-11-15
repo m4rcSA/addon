@@ -3,6 +3,7 @@
 # -*- Created for Alfa-addon -*-
 # -*- By the Alfa Development Group -*-
 
+from core import urlparse as alfa_urlparse
 import re
 from bs4 import BeautifulSoup
 
@@ -54,22 +55,22 @@ def mainlist(item):
 
     itemlist = list()
         
-    itemlist.append(Item(channel=item.channel, title='Nuevos Capítulos', url=host + 'episodios/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Nuevos Capítulos', url=alfa_urlparse.build_url(host, 'episodios/'), action='list_all',
                          thumbnail=get_thumb('new episodes', auto=True)))
     
-    itemlist.append(Item(channel=item.channel, title='Series', url=host + 'series/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Series', url=alfa_urlparse.build_url(host, 'series/'), action='list_all',
                          thumbnail=get_thumb('tvshows', auto=True)))
     
-    itemlist.append(Item(channel=item.channel, title='Películas', url=host + 'peliculas/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Películas', url=alfa_urlparse.build_url(host, 'peliculas/'), action='list_all',
                          thumbnail=get_thumb('movies', auto=True)))
     
-    itemlist.append(Item(channel=item.channel, title='Latino', url=host + 'audios/latino/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Latino', url=alfa_urlparse.build_url(host, 'audios/latino/'), action='list_all',
                          thumbnail=get_thumb('latino', auto=True)))
     
-    itemlist.append(Item(channel=item.channel, title='Castellano', url=host + 'audios/castellano/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Castellano', url=alfa_urlparse.build_url(host, 'audios/castellano/'), action='list_all',
                          thumbnail=get_thumb('cast', auto=True)))
     
-    itemlist.append(Item(channel=item.channel, title='Subtitulado', url=host + 'audios/sub-espanol/', action='list_all',
+    itemlist.append(Item(channel=item.channel, title='Subtitulado', url=alfa_urlparse.build_url(host, 'audios/sub-espanol/'), action='list_all',
                          thumbnail=get_thumb('vose', auto=True)))
     
     itemlist.append(Item(channel=item.channel, title="Buscar...", action="search",
@@ -297,41 +298,18 @@ def findvideos(item):
 
     itemlist = list()
     
-    soup = create_soup(item.url)
-
-    for elem in soup.find_all("li", id=re.compile(r"player-option-\d+")):
-
-        # logger.error(str(elem))
-        post = {"action": "zeta_player_ajax", "post": elem["data-post"], "nume": elem["data-nume"],
-                "type": elem["data-type"]}
-        headers = {"Referer": item.url}
-        doo_url = "%swp-admin/admin-ajax.php" % host
-
-        response = httptools.downloadpage(doo_url, timeout=TIMEOUT, post=post, 
-                                          headers=headers, canonical=canonical, 
-                                          hide_infobox=True)
-        if response.code != 200:
-            continue
-
-        data_json = json.loads(response.data)
-        
-        if data_json.get('type', '') != "iframe":
-            continue
-        
-        embed_url = data_json.get('embed_url', '')
-                        
-        iframe = BeautifulSoup(embed_url, "html5lib", from_encoding="utf-8")
-        
-        url = iframe.iframe["src"]
-        
-        lang = "VOSE"
-        
-        try:
-            lang_icon_src = elem.find("span", class_="flag").img["src"]
-            lang = extract_lang_from_url(lang_icon_src)
-        except Exception as e:
-            logger.error(str(e))
-        
+    soup = create_soup(item.url).find('div', id = 'yan-list-servers')
+    matches = soup.find_all("div", class_='ypp-card-play')
+    
+    try:
+        lang_icon_src = soup.img["src"]
+        lang = extract_lang_from_url(lang_icon_src)
+    except Exception as e:
+        logger.error(str(e))
+    
+    for elem in matches:
+        url = elem['data-url']
+        logger.debug(url)
         itemlist.append(Item(channel=item.channel, title='%s', action='play', url=url,
                                 language=IDIOMAS.get(lang, "VOSE"), infoLabels=item.infoLabels))
     
@@ -359,8 +337,9 @@ def search(item, texto):
     
     try:
         if texto != '':
+            _url_query_texto = str(texto)
             texto = str(texto).replace(" ", "+")
-            item.url = "{0}?s={1}".format(host, texto)
+            item.url = alfa_urlparse.build_url(host, query=[('s', u'{}'.format(_url_query_texto))])
             item.c_type = "search"
             return list_all(item)
         else:
@@ -382,7 +361,7 @@ def newest(categoria):
 
     try:
         if categoria in ['series']:
-            item.url = host + 'episodios/'
+            item.url = alfa_urlparse.build_url(host, 'episodios/')
             itemlist = list_all(item)
 
         if len(itemlist) > 0 and ">> {0}".format(config.get_localized_string(30992)) in itemlist[-1].title:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------
 
+from core import urlparse as alfa_urlparse
 import re
 
 from core import urlparse
@@ -25,8 +26,8 @@ list_servers = list(SERVER.values())
 canonical = {
              'channel': 'pelisflix', 
              'host': config.get_setting("current_host", 'pelisflix', default=''), 
-             'host_alt': ['https://pelisflix1.cc/'], 
-             'host_black_list': ['https://pelisflix1.autos/',
+             'host_alt': ['https://pelisflix1.cfd/'], 
+             'host_black_list': ['https://pelisflix1.cc/', 'https://pelisflix1.autos/',
                                  'https://pelisflix1.net/', 'https://pelisflix1.loan/', 'https://pelisflixhd.fit/',
                                  'https://pelisflixhd.click/', 'https://pelisflixhd.buzz/', 'https://pelisflixhd.biz/',
                                  'https://pelisflixhd.cam/', 'https://pelisflixhd.fun/', 'https://pelisflixhd.net/', 
@@ -35,7 +36,7 @@ canonical = {
                                  'https://pelisflix.works/', 'https://pelisflix.loan/', 'https://pelisflix.casa/',
                                  'https://pelisflix.show/', 'https://pelisflix.zone/', 'https://pelisflix.host/', 
                                  'https://pelisflix.codes/', 'https://pelisflix.mom/', 'https://pelisflix.tools/', 
-                                 'https://pelisflix.quest/', 'https://pelisflix.hair/', 'https://pelisflix.store/'
+                                 'https://pelisflix.quest/', 'https://pelisflix.hair/', 'https://pelisflix.store/',
                                  "https://pelis28.art/", "https://pelisflix2.fun/", "https://pelisflix.run/", 
                                  "https://pelisflix.pw/", "https://pelisflix.biz/", "https://ww2.pelisflix2.one/", 
                                  "https://pelisflix2.one/", "https://pelisflix.li/", "https://ww3.pelisflix2.one/"], 
@@ -56,9 +57,9 @@ def mainlist(item):
     autoplay.init(item.channel, list_servers, list_quality)
     
     
-    itemlist.append(item.clone(title="Estrenos" , action="lista", url= host + "genero/estrenos/", thumbnail=get_thumb("premieres", auto=True)))
-    itemlist.append(item.clone(title="Peliculas" , action="lista", url= host + "peliculas-online/", thumbnail=get_thumb("movies", auto=True)))
-    itemlist.append(item.clone(title="Series", action="lista", url= host + "series-online/", thumbnail=get_thumb("tvshows", auto=True)))
+    itemlist.append(item.clone(title="Estrenos" , action="lista", url= alfa_urlparse.build_url(host, 'genero/estrenos/'), thumbnail=get_thumb("premieres", auto=True)))
+    itemlist.append(item.clone(title="Peliculas" , action="lista", url= alfa_urlparse.build_url(host, 'peliculas-online/'), thumbnail=get_thumb("movies", auto=True)))
+    itemlist.append(item.clone(title="Series", action="lista", url= alfa_urlparse.build_url(host, 'series-online/'), thumbnail=get_thumb("tvshows", auto=True)))
     
     itemlist.append(item.clone(title="Genero" , action="categorias", url= host, thumbnail=get_thumb('genres', auto=True)))
     itemlist.append(item.clone(title="Productora" , action="categorias", url= host, thumbnail=get_thumb("studio", auto=True)))
@@ -98,8 +99,9 @@ def search(item, texto):
     logger.info()
     
     try:
+        _url_query_texto = texto
         texto = texto.replace(" ", "+")
-        item.url = "%s?s=%s" % (host, texto)
+        item.url = alfa_urlparse.build_url(host, query=[('s', u'{}'.format(_url_query_texto))])
         if texto != "":
             return lista(item)
         else:
@@ -120,7 +122,7 @@ def anno(item):
     now = datetime.now()
     year = int(now.year)
     while year >= 1940:
-        itemlist.append(item.clone(title="%s" %year, action="lista", url= "%s?año=%s&nota=0&orden=recientes" % (item.url,year)))
+        itemlist.append(item.clone(title="%s" %year, action="lista", url= alfa_urlparse.build_url(item.url, query=[('año', u'{}'.format(year)), ('nota', '0'), ('orden', 'recientes')])))
         year -= 1
     
     return itemlist
@@ -143,8 +145,8 @@ def categorias(item):
         if "/estrenos/" not in url: 
             itemlist.append(item.clone(action="lista", url=url, title=title))
     if "Genero" not in item.title:
-        itemlist.append(item.clone(action="lista", url="%sgenero/dc/" % host, title="DC"))
-        itemlist.append(item.clone(action="lista", url="%sgenero/marvel/" % host, title="MARVEL"))
+        itemlist.append(item.clone(action="lista", url=alfa_urlparse.build_url(host, 'genero/dc/'), title="DC"))
+        itemlist.append(item.clone(action="lista", url=alfa_urlparse.build_url(host, 'genero/marvel/'), title="MARVEL"))
     
     return itemlist
 
@@ -220,7 +222,10 @@ def lista(item):
     itemlist = []
     soup = create_soup(item.url, referer=host)
     matches = soup.find_all("li", class_=re.compile(r"^post-\d+"))
+    # matches = soup.find('ul', class_='MovieList').find_all("li")
+    
     for elem in matches:
+        if "404" in elem.figure.img['data-src']: continue
         url = elem.a['href']
         title = elem.h2.text.strip()
         thumbnail = elem.figure.img['data-src']

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------
+
+from core import urlparse as alfa_urlparse
 import re
 
 from platformcode import config, logger, unify
@@ -10,6 +12,8 @@ from core import httptools
 from core import urlparse
 from modules import autoplay
 from bs4 import BeautifulSoup
+from core import jsontools as json
+
 
 UNIFY_PRESET = config.get_setting("preset_style", default="Inicial")
 color = unify.colors_file[UNIFY_PRESET]
@@ -21,6 +25,8 @@ list_servers = ['mangovideo']
 #  https://pandamovies.pw/ & https://xxxparodyhd.net & https://streamporn.pw/ & https://streamporn.li 
 #  https://www.netflixporno.net & https://watchpornfree.info & https://losporn.org/ 
 #  https://xxxscenes.net & https://watchfreexxx.net/ & https://speedporn.net &https://pornkino.cc/
+#  https://pornmovieshd.com/
+
 canonical = {
              'channel': 'pandamovie', 
              'host': config.get_setting("current_host", 'pandamovie', default=''), 
@@ -35,26 +41,31 @@ host = canonical['host'] or canonical['host_alt'][0]
 def mainlist(item):
     logger.info()
     itemlist = []
-
+    
     autoplay.init(item.channel, list_servers, list_quality)
-
-    itemlist.append(Item(channel=item.channel, title="Peliculas", action="lista", url=host + "movies"))
-    itemlist.append(Item(channel=item.channel, title="Year", action="categorias", url=host + "movies", id="menu-item-24"))
-    itemlist.append(Item(channel=item.channel, title="Canal", action="categorias", url=host + "movies", id="menu-item-23"))
-    itemlist.append(Item(channel=item.channel, title="Categorias", action="categorias", url=host + "movies", id="menu-item-25"))
-    itemlist.append(Item(channel=item.channel, title="Buscar", action="search", url=host + "movies"))
-    itemlist.append(Item(channel=item.channel, title="-------------------"))
-    itemlist.append(Item(channel=item.channel, title="Escenas", action="submenu", url=host + "xxxscenes/"))
+    
+    itemlist.append(Item(channel=item.channel, title="Ultimas", action="lista", url=alfa_urlparse.build_url(host, 'page/1', query='filter=latest')))
+    itemlist.append(Item(channel=item.channel, title="Mas Vistas", action="lista", url=alfa_urlparse.build_url(host, 'page/1', query='filter=most-viewed')))
+    itemlist.append(Item(channel=item.channel, title="Mejor Valorada", action="lista", url=alfa_urlparse.build_url(host, 'page/1', query='filter=popular')))
+    itemlist.append(Item(channel=item.channel, title="Mas Larga", action="lista", url=alfa_urlparse.build_url(host, 'page/1', query='filter=longest')))
+    
+    itemlist.append(Item(channel=item.channel, title="Year", action="catalogo", url=alfa_urlparse.build_url(host, 'release-years')))
+    itemlist.append(Item(channel=item.channel, title="Canal", action="catalogo", url=alfa_urlparse.build_url(host, 'porn-studios', query='sort=pop')))
+    itemlist.append(Item(channel=item.channel, title="Pornstar", action="catalogo", url=alfa_urlparse.build_url(host, 'pornstars', query='sort=pop')))
+    itemlist.append(Item(channel=item.channel, title="Categorias", action="categorias", url=alfa_urlparse.build_url(host, 'genres')))
+    itemlist.append(Item(channel=item.channel, title="Buscar", action="search", url=host))
+    # itemlist.append(Item(channel=item.channel, title="-------------------"))
+    # itemlist.append(Item(channel=item.channel, title="Escenas", action="submenu", url=host + "xxxscenes/"))
     
     autoplay.show_option(item.channel, itemlist)
-
+    
     return itemlist
 
 
 def submenu(item):
     logger.info()
     itemlist = []
-    itemlist.append(Item(channel=item.channel, title="Ultimos", action="lista", url=item.url + "movies"))
+    itemlist.append(Item(channel=item.channel, title="Ultimos", action="lista", url=alfa_urlparse.build_url(item.url, 'movies')))
     itemlist.append(Item(channel=item.channel, title="Canal", action="categorias", url=item.url , id="menu-item-38820"))
     itemlist.append(Item(channel=item.channel, title="Categorias", action="categorias", url=item.url,  id="menu-item-38760"))
     itemlist.append(Item(channel=item.channel, title="Buscar", action="search", url=item.url))
@@ -63,8 +74,9 @@ def submenu(item):
 
 def search(item, texto):
     logger.info()
+    _url_query_texto = texto
     texto = texto.replace(" ", "+")
-    item.url = "%ssearch/%s" % (item.url, texto)
+    item.url = alfa_urlparse.build_url(item.url, query=[('s', u'{}'.format(_url_query_texto)), ('filter', 'latest')])
     try:
         return lista(item)
     except Exception:
@@ -77,22 +89,67 @@ def search(item, texto):
 def categorias(item):
     logger.info()
     itemlist = []
-    soup = create_soup(item.url).find('ul', class_='top-menu').find('li', id=item.id)
-    matches = soup.find_all('a')
+    
+    soup = create_soup(item.url)
+    matches = soup.find('div', class_='chips').find_all('a')
+    
     for elem in matches:
         url = elem['href']
+        
         title = elem.text.strip()
+        if elem.small:
+            cantidad = elem.small.text.strip()
+            title = title.replace(cantidad, '')
+            title = "%s (%s)" %(title, cantidad)
+        
         plot = ""
         thumbnail = ""
+        if elem.img:
+            thumbnail = elem.img.get('src', '')
         if not url.startswith("https"):
             url = "https:%s" % url
         if "#" not in url:
             itemlist.append(Item(channel=item.channel, action="lista", title=title, url=url,
                                  thumbnail=thumbnail, plot=plot))
-    if "Year" in item.title:
-        itemlist.reverse()
-    else:
-        itemlist.sort(key=lambda x: x.title)
+    next_page = soup.find('a', class_='next')
+    if next_page:
+        next_page = next_page['href']
+        next_page = urlparse.urljoin(item.url, next_page)
+        itemlist.append(Item(channel=item.channel, action="categorias", title="[COLOR blue]Página Siguiente >>[/COLOR]", url=next_page) )
+    
+    return itemlist
+
+
+def catalogo(item):
+    logger.info()
+    itemlist = []
+    
+    soup = create_soup(item.url)
+    matches = soup.find('div', class_='tgrid').find_all('a')
+    
+    for elem in matches:
+        url = elem['href']
+        
+        title = elem.b.text.strip()
+        if elem.small:
+            cantidad = elem.small.text.strip()
+            title = "%s (%s)" %(title, cantidad)
+        
+        plot = ""
+        thumbnail = ""
+        if elem.img:
+            thumbnail = elem.img.get('src', '')
+        if not url.startswith("https"):
+            url = "https:%s" % url
+        if "#" not in url:
+            itemlist.append(Item(channel=item.channel, action="lista", title=title, url=url,
+                                 thumbnail=thumbnail, plot=plot))
+    next_page = soup.find('a', class_='next')
+    if next_page:
+        next_page = next_page['href']
+        next_page = urlparse.urljoin(item.url, next_page)
+        itemlist.append(Item(channel=item.channel, action="catalogo", title="[COLOR blue]Página Siguiente >>[/COLOR]", url=next_page) )
+    
     return itemlist
 
 
@@ -112,23 +169,23 @@ def lista(item):
     logger.info()
     itemlist = []
     soup = create_soup(item.url)
-    matches = soup.find_all('div', class_='ml-item')
+    matches = soup.find_all('article', class_='card')
     for elem in matches:
         year = ""
         url = elem.a['href']
-        title = elem.a['oldtitle']
+        title = elem.h2.text.strip()
         thumbnail = elem.img['src']
         if "svg" in thumbnail:
             thumbnail = elem.img['data-lazy-src']
         if "xxxscenes" not in item.url:
-            year = elem.find('div', class_='jtip-top').a
+            year = elem.find('span', class_='card__q')
             if year:
                 year = year.text.strip()
         itemlist.append(Item(channel=item.channel, action="findvideos", title=title, url=url, thumbnail=thumbnail,
                              fanart=thumbnail, contentTitle=title, infoLabels={"year": year} ))
-    next_page = soup.find('li', class_='active')
-    if next_page and next_page.find_next_sibling("li"):
-        next_page = next_page.find_next_sibling("li").a['href']
+    next_page = soup.find('a', class_='next')
+    if next_page:
+        next_page = next_page['href']
         next_page = urlparse.urljoin(item.url, next_page)
         itemlist.append(Item(channel=item.channel, action="lista", title="[COLOR blue]Página Siguiente >>[/COLOR]", url=next_page) )
     return itemlist
@@ -139,7 +196,7 @@ def findvideos(item):
     itemlist = []
     video_urls = []
     soup = create_soup(item.url)
-    pornstars = soup.find('div', class_='mvic-info').find_all('a', href=re.compile("/actors/"))
+    pornstars = soup.find_all('a', href=re.compile("/actor/"))
     for x , value in enumerate(pornstars):
         pornstars[x] = value.text.strip()
     pornstar = ' & '.join(pornstars)
@@ -150,15 +207,17 @@ def findvideos(item):
     plot = pornstar
     # lista = item.contentTitle.split()
     # lista.insert (0, pornstar)
-    # item.contentTitle = ' '.join(lista)    
-    matches = soup.find('div', id='pettabs').find_all('a')
-    for elem in matches:
-        url = elem['href']
-        url = url.split("?link=")[-1]
-        if url not in video_urls:
-            video_urls += url
-            itemlist.append(Item(channel=item.channel, title='%s', url=url, action='play', plot=plot, language='VO',contentTitle = item.contentTitle))
+    # item.contentTitle = ' '.join(lista)
+    
+    data = soup.section['data-servers']
+    JSONData = json.load(data)
+    
+    for elem in JSONData:
+        url = elem['u']
+        itemlist.append(Item(channel=item.channel, title='%s', url=url, action='play', plot=plot, language='VO',contentTitle = item.contentTitle))
     itemlist = servertools.get_servers_itemlist(itemlist, lambda x: x.title % x.server)
+    
     # Requerido para AutoPlay
     autoplay.start(itemlist, item)
+    
     return itemlist

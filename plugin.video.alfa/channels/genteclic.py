@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from core import urlparse as alfa_urlparse
 import sys, base64
 PY3 = False
 if sys.version_info[0] >= 3: PY3 = True; unicode = str; unichr = chr; long = int
@@ -35,7 +36,7 @@ encoding = None
 
 try:
     __modo_grafico__ = config.get_setting('modo_grafico', __channel__)
-except:
+except Exception:
     __modo_grafico__ = True
 
 
@@ -44,8 +45,8 @@ def mainlist(item):
     autoplay.init(item.channel, list_servers, list_quality)
     
     itemlist = []
-    itemlist.append(Item(channel = item.channel, title = "Novedades", action = "peliculas", tipo_action="jnews_module_ajax_jnews_video_block4_view", url = host + "/latest", thumbnail = get_thumb("newest", auto = True)))
-    #itemlist.append(Item(channel = item.channel, title = "Por género", action = "generos_years", url = host, extra = "Genero", thumbnail = get_thumb("genres", auto = True) ))
+    itemlist.append(Item(channel = item.channel, title = "Novedades", action = "peliculas", tipo_action="jnews_module_ajax_jnews_video_block4_view", url = alfa_urlparse.build_url(host, '/latest'), thumbnail = get_thumb("newest", auto = True)))
+    itemlist.append(Item(channel = item.channel, title = "Por género", action = "generos", url = host, extra = "Peliculas", thumbnail = get_thumb("genres", auto = True) ))
     itemlist.append(Item(channel = item.channel, title = ""))
     itemlist.append(Item(channel = item.channel, title = "Buscar", action = "search", url = host, thumbnail = get_thumb("search", auto = True)))
     autoplay.show_option(item.channel, itemlist)
@@ -85,15 +86,15 @@ def newest(categoria):
     item = Item()
     try:
         if categoria in ['peliculas','latino']:
-            item.url = host + "/latest"
+            item.url = alfa_urlparse.build_url(host, '/latest')
         elif categoria == 'infantiles':
-            item.url = host + '/category/animacion/'
+            item.url = alfa_urlparse.build_url(host, '/category/animacion/')
         elif categoria == 'terror':
-            item.url = host + '/category/torror/'
+            item.url = alfa_urlparse.build_url(host, '/category/torror/')
         itemlist = peliculas(item)
         if "Pagina" in itemlist[-1].title:
             itemlist.pop()
-    except:
+    except Exception:
         import sys
         for line in sys.exc_info():
             logger.error("{0}".format(line))
@@ -117,17 +118,24 @@ def generos(item):
     logger.info()
     itemlist = []
     data = httptools.downloadpage(item.url, encoding=encoding, canonical=canonical).data
-    patron = '(?s)%s(.*?)<\/ul>\s*<\/div>' %item.extra
+    patron = '(?s)%s(.*?)<\/ul>' %item.extra
     bloque = scrapertools.find_single_match(data, patron)
     patron  = 'href="([^"]+)'
     patron += '">([^<]+)'
     matches = scrapertools.find_multiple_matches(bloque, patron)
+    
     for url, titulo in matches:
-        if not url.startswith("http"): url = host + url
+        if not url.startswith("http"): url = alfa_urlparse.urljoin(host, url)
+        datos = httptools.downloadpage(url, encoding=encoding, canonical=canonical).data
+        
+        cat = scrapertools.find_single_match(datos, '"include_category":(\d+)')
         itemlist.append(Item(channel = item.channel,
                              action = "peliculas",
                              title = titulo,
-                             url = url
+                             url = url,
+                             cat = cat,
+                             tipo_action="jnews_module_ajax_jnews_video_block4_view",
+                             extra = item.extra
                              ))
     return itemlist
 
@@ -145,11 +153,13 @@ def peliculas(item):
             "data[attribute][data_type]":"custom",
             "data[attribute][video_only]":"yes",
             "data[attribute][number_post]":"12",
-            "data[attribute][pagination_number_post]":"12"
+            "data[attribute][pagination_number_post]":"12",
+            "data[attribute][include_category]": item.cat
             }
             #jnews_module_ajax_jnews_video_block4_view
             #jnews_ajax_live_search
-    uuu = "%s?ajax-request=jnews" % host
+    
+    uuu = alfa_urlparse.build_url(host, query='ajax-request=jnews')
     headers = {"accept": "text/html, */*; q=0.01",
                 "accept-language": "es-ES,es;q=0.9",
                 "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -185,20 +195,33 @@ def peliculas(item):
     return itemlist
 
 
+# <div class='jeg_featured_video_wrapper'><div data-src="https://www.youtube.com/watch?v=YSg-KC7SX_M" data-type="youtube" data-repeat="false" data-autoplay="false" class="youtube-class clearfix">
+# <div class='jeg_featured_video_wrapper'><div data-src="https://vimeo.com/139884419" data-repeat="false" data-autoplay="false" data-type="vimeo" class="vimeo-class clearfix">
+# <div class='jeg_featured_video_wrapper'><div class="jeg_video_container"><iframe width="1280" height="720" src="//ok.ru/videoembed/16094555867777?nochat=1" frameborder="0" allow="autoplay" allowfullscreen></iframe></div><div class='floating_close'></div></div>
+# <div class='jeg_featured_video_wrapper'><div class="jeg_video_container"><div id="chute"></div><script>var b=document.createElement('iframe');b.setAttribute('allowfullscreen','true');b.setAttribute('width','640');b.setAttribute('height','360');b.setAttribute('src','https://www.bitchute.com/embed/OGHzXgEzQEw1');b.setAttribute('frameborder','0');document.getElementById('chute').appendChild(b);</script></div><div class='floating_close'></div></div>
+
+#SERVER   https://www.bitchute.com/embed/OGHzXgEzQEw1
+
+
 def findvideos(item):
     itemlist = []
     data = httptools.downloadpage(item.url, encoding=encoding, canonical=canonical).data
-    matches = scrapertools.find_multiple_matches(data, 'jeg_video_container.*?src="([^"]+)' )
-    for url in matches:
-        itemlist.append(Item(
-                        channel=item.channel,
-                        contentTitle=item.contentTitle,
-                        contentThumbnail=item.thumbnail,
-                        infoLabels=item.infoLabels,
-                        language="Latino",
-                        title='%s', action="play",
-                        url=url
-                       ))
+    
+    patron = 'jeg_featured_video_wrapper[\'"].*?'
+    patron += '(?:data-src=|src=|(?:[\'"]src[\'"]\s*,\s*))[\'"](https?:)?\/\/([^\'"]+)[\'"]'
+    matches = scrapertools.find_single_match(data, patron)
+    
+    url = alfa_urlparse.urlunsplit(('https', u'{}'.format(matches[-1]), "", "", ""))
+    
+    itemlist.append(Item(
+                    channel=item.channel,
+                    contentTitle=item.contentTitle,
+                    contentThumbnail=item.thumbnail,
+                    infoLabels=item.infoLabels,
+                    language="Latino",
+                    title='%s', action="play",
+                    url=url
+                   ))
 
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
     tmdb.set_infoLabels_itemlist(itemlist, __modo_grafico__)
@@ -223,7 +246,3 @@ def findvideos(item):
                                  ))
     return itemlist
 
-
-def play(item):
-    item.thumbnail = item.contentThumbnail
-    return [item]

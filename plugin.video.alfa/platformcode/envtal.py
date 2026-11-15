@@ -19,7 +19,7 @@ import platform
 import socket
 try:
     import ctypes
-except:
+except Exception:
     pass
 import traceback
 
@@ -58,7 +58,7 @@ def get_environment():
         try:
             import multiprocessing
             environment['proc_num'] = ' (%sx)' % str(multiprocessing.cpu_count())
-        except:
+        except Exception:
             environment['proc_num'] = ''
         
         if PLATFORM in ['windows', 'xbox']:
@@ -77,7 +77,7 @@ def get_environment():
                 output_cmd = re.sub(r'\n|\r|\s{2}', '', output_cmd)
                 environment['prod_model'] = str(scrapertools.find_single_match(output_cmd, \
                                 r'\w+.*?(?i)(?:Intel\(R\))?(?:\s*Core\(TM\))\s*(.*?CPU.*?)\s*(?:\@|$)'))
-            except:
+            except Exception:
                 pass
         
         elif PLATFORM in ['android', 'atv2']:
@@ -90,7 +90,7 @@ def get_environment():
                         environment['os_release'] = str(scrapertools.find_single_match(label_a, r':\s*\[(.*?)\]$'))
                     if 'product.model' in label_a:
                         environment['prod_model'] = str(scrapertools.find_single_match(label_a, r':\s*\[(.*?)\]$'))
-            except:
+            except Exception:
                 try:
                     for label_a in filetools.read(os.environ['ANDROID_ROOT'] + '/build.prop').split():
                         if PY3 and isinstance(label_a, bytes):
@@ -99,7 +99,7 @@ def get_environment():
                             environment['os_release'] = str(scrapertools.find_single_match(label_a, '=(.*?)$'))
                         if 'product.model' in label_a:
                             environment['prod_model'] = str(scrapertools.find_single_match(label_a, '=(.*?)$'))
-                except:
+                except Exception:
                     pass
             environment['prod_model'] += ' (%s)' % config.is_rooted(silent=True)
         
@@ -120,7 +120,7 @@ def get_environment():
                         environment['prod_model'] = str(scrapertools.find_single_match(label_a, \
                                 r'model.*?:\s*(?i)(?:Intel\(R\))?(?:\s*Core\(TM\))\s*(.*?CPU.*?)\s*(?:\@|$)'))
                         break
-            except:
+            except Exception:
                 pass
             
             if 'libreelec' in environment['os_release'].lower() and PLATFORM != 'raspberry':
@@ -130,7 +130,7 @@ def get_environment():
                         PLATFORM = 'raspberry'
                         window = xbmcgui.Window(10000)
                         window.setProperty("alfa_system_platform", PLATFORM)
-                    except:
+                    except Exception:
                         pass
         
         else:
@@ -176,7 +176,7 @@ def get_environment():
                         meminfo = f.read()
                     environment['mem_total'] = str((int(re.search(r'MemTotal:\s+(\d+)', meminfo).groups()[0]) // 1024))
                     environment['mem_free'] = str((int(re.search(r'MemAvailable:\s+(\d+)', meminfo).groups()[0]) // 1024))
-            except:
+            except Exception:
                 environment['mem_total'] = ''
                 environment['mem_free'] = ''
             
@@ -203,7 +203,7 @@ def get_environment():
                 environment['kodi_bmode'] = str(config.get_kodi_setting('filecache.buffermode')) or environment['kodi_bmode']
                 environment['kodi_rfactor'] = '%s / Chunksize: %s KB' % (str((config.get_kodi_setting('filecache.readfactor') or 400) / 100),
                                                                 str(int((config.get_kodi_setting('filecache.chunksize') or 131072) / 1024)))
-        except:
+        except Exception:
             pass
         
         environment['userdata_path'] = str(config.get_data_path())
@@ -220,7 +220,7 @@ def get_environment():
                 if not disk_space.f_frsize: disk_space.f_frsize = disk_space.f_frsize.f_bsize
                 environment['userdata_free'] = str(round((float(disk_space.f_bavail) / \
                                 (1024**3)) * float(disk_space.f_frsize), 3))
-        except:
+        except Exception:
             environment['userdata_free'] = '?'
         
         if environment.get('userdata_path_perm', ''):
@@ -256,7 +256,7 @@ def get_environment():
                     else:
                         if i == 0: environment['videolab_pelis_scraper'] += ',NOP'
                         else: environment['videolab_series_scraper'] += ',NOP'
-            except:
+            except Exception:
                 pass
 
             environment['videolab_series'] = '?'
@@ -283,14 +283,14 @@ def get_environment():
                                 config.get_setting("folder_movies"))):
                 environment['videolab_pelis'] = str(len(filetools.listdir(filetools.join(environment['videolab_path'], \
                                 config.get_setting("folder_movies")))))
-        except:
+        except Exception:
             pass
         try:
             video_updates = ['No', 'Inicio', 'Una vez', 'Inicio+Una vez', 'Dos veces al día']
             environment['videolab_update'] = str(video_updates[config.get_setting("videolibrary_update")])
             if config.get_setting("videolibrary_scan_after_backup", default=False):
                 environment['videolab_update'] += ' (Solo SCAN)'
-        except:
+        except Exception:
             environment['videolab_update'] = '?'
         try:
             if environment['os_name'].lower() in ['windows', 'xbox']:
@@ -303,7 +303,7 @@ def get_environment():
                 if not disk_space.f_frsize: disk_space.f_frsize = disk_space.f_frsize.f_bsize
                 environment['videolab_free'] = str(round((float(disk_space.f_bavail) / \
                                 (1024**3)) * float(disk_space.f_frsize), 3))
-        except:
+        except Exception:
             environment['videolab_free'] = '?'
 
         torrent_paths = torrent_dirs()
@@ -356,7 +356,7 @@ def get_environment():
                     __settings__ = xbmcaddon.Addon(id="plugin.video.torrest")
                     cliente['Platform'] += ': %s: %s:%s' % (str(__settings__.getSetting("service_enabled")), \
                                     str(__settings__.getSetting("service_ip") or 'ERROR.127.0.0.1'), str(__settings__.getSetting("port")))
-                except:
+                except Exception:
                     pass
                 #cliente['Options'] = str(filetools.read(filetools.join('special://masterprofile', \
                 #                    'addon_data', 'plugin.video.torrest', 'settings.xml')))
@@ -376,7 +376,7 @@ def get_environment():
                         if not disk_space.f_frsize: disk_space.f_frsize = disk_space.f_frsize.f_bsize
                         cliente['Libre'] = str(round((float(disk_space.f_bavail) / \
                                     (1024**3)) * float(disk_space.f_frsize), 3)).replace('.', ',')
-                except:
+                except Exception:
                     pass
                 if cliente.get('D_load_Path_perm', ''):
                     cliente['D_load_Path'] = cliente['D_load_Path_perm']
@@ -391,7 +391,7 @@ def get_environment():
             for channel_bloqued, proxy_active in list(proxy_channel_bloqued.items()):
                 if proxy_active != 'OFF':
                     environment['proxy_active'] += channel_bloqued + ', '
-        except:
+        except Exception:
             pass
         if not environment['proxy_active']: environment['proxy_active'] = 'OFF'
         environment['proxy_active'] = environment['proxy_active'].rstrip(', ')
@@ -442,21 +442,28 @@ def get_environment():
             else:
                 local_IP = ', [WAN]'
             s.close()
-        except:
+        except Exception:
             logger.error(traceback.format_exc())
         environment['assistant_version'] += '%s, Req: %s' % (local_IP, str(config.get_setting('assistant_binary', default=False)))
         environment['assistant_cf_ua'] = str(config.get_setting('cf_assistant_ua', default=None))
         assistant_path = filetools.join(os.getenv('ANDROID_STORAGE'), 'emulated', '0', 'Android', 'data', 'com.alfa.alfamobileassistant')
         if PLATFORM in ['android', 'atv2'] and filetools.exists(assistant_path):
             environment['assistant_path'] = str(filetools.file_info(assistant_path))
-    
+
+        environment['tor_availability'] = str(None)
+        try:
+            window = xbmcgui.Window(10000)
+            environment['tor_availability'] = window.getProperty("alfa_cached_TOR_proxy") or str(None)
+        except Exception:
+            pass
+
         try:
             import ssl
             environment['ssl_version'] = str(ssl.OPENSSL_VERSION)
-        except:
+        except Exception:
             environment['ssl_version'] = ''
 
-    except:
+    except Exception:
         logger.error(traceback.format_exc())
         environment = {}
         environment['log_size'] = ''
@@ -501,6 +508,7 @@ def get_environment():
         environment['torrentcli_unrar'] = ''
         environment['torrent_error'] = ''
         environment['assistant_version'] = ''
+        environment['tor_availability'] = ''
         environment['assistant_cf_ua'] = ''
         environment['ssl_version'] = ''
         
@@ -574,7 +582,9 @@ def list_env(environment={}):
     logger.info('Assistant ver.: ' + environment['assistant_version'] + \
                             ' - Assistant UA: ' + environment['assistant_cf_ua'] + \
                             ' - Assistant path: ' + environment.get('assistant_path', ''), force=True)
-    
+
+    logger.info('TOR disponible: ' + environment['tor_availability'], force=True)
+
     logger.info('TAMAÑO del LOG: ' + environment['log_size'].replace('.', ',') + ' MB', force=True)
     logger.info("----------------------------------------------", force=True)
     
@@ -676,6 +686,9 @@ def paint_env(item, environment={}):
     assistant = """\
     Muestra la versión del [COLOR yellow]Assistant[/COLOR] instalado y el [COLOR yellow]User Agent[/COLOR] usado
     """
+    TOR = """\
+    Muestra la dirección del servidor de proxies TOR (Browswer) que atiende el proxies del tipo [COLOR yellow]socks5h://127.0.0.1:9050 ó 9051[/COLOR]
+    """
     log = """\
     Muestra el tamaño actual del [COLOR yellow]Log[/COLOR]
     """
@@ -761,6 +774,10 @@ def paint_env(item, environment={}):
                     environment['assistant_version'] + ' - [COLOR yellow]Assistant UA: [/COLOR]' + 
                     environment['assistant_cf_ua'] + ' - [COLOR yellow]Assistant path: [/COLOR]' + 
                     environment.get('assistant_path', ''), action="", plot=assistant, thumbnail=thumb, 
+                    folder=False))
+
+    itemlist.append(Item(channel=item.channel, title='[COLOR yellow]TOR disponible: [/COLOR]' + 
+                    environment['tor_availability'], action="", plot=TOR, thumbnail=thumb, 
                     folder=False))
     
     itemlist.append(Item(channel=item.channel, title='[COLOR yellow]TAMAÑO del LOG: [/COLOR]' + 

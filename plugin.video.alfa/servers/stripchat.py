@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from core import urlparse as alfa_urlparse
 import sys
 import re
 
@@ -18,6 +19,11 @@ def test_video_exists(page_url):
     logger.info("(page_url='%s')" % page_url)
     
     global url,vid,data
+    
+    # El CDN del widget (lo resuelve findvideos) ya entrega HLS estandar y sirve
+    # los segmentos: no hay token ni nada que comprobar.
+    if 'growcdn' in page_url:
+        return True, ""
     
     vd = page_url.split("|")
     url = vd[0]
@@ -42,11 +48,41 @@ def get_video_url(page_url, video_password):
     
     global url,vid,data
     
-    data = data["item"]
+    if 'growcdn' in page_url:
+        base = page_url.split("|")[0]
+        cabeceras = "|Referer=%s/&Origin=%s" % (host, host)
+        try:
+            datos = httptools.downloadpage(base, **kwargs).data
+            if isinstance(datos, bytes):
+                datos = datos.decode('utf-8', 'replace')
+        except Exception:
+            datos = ''
+
+        variantes = re.findall(r'#EXT-X-STREAM-INF[^\r\n]*RESOLUTION=\d+x(\d+)[^\r\n]*\r?\n([^\r\n#]+)', datos or '')
+        lista = []
+        for alto, enlace in variantes:
+            enlace = enlace.strip()
+            if not enlace.startswith('http'):
+                enlace = urlparse.urljoin(base, enlace)
+            lista.append((int(alto), enlace))
+
+        lista.sort()
+        for alto, enlace in lista:
+            respuesta = httptools.downloadpage(enlace, **kwargs)
+            comprobacion = getattr(respuesta, 'data', '') or ''
+            if isinstance(comprobacion, bytes):
+                comprobacion = comprobacion.decode('utf-8', 'replace')
+            if getattr(respuesta, 'code', 0) != 200 or '#EXTM3U' not in comprobacion:
+                logger.info("stripchat: variante %sp descartada (%s)" % (alto, getattr(respuesta, 'code', '?')))
+                continue
+            video_urls.append(["[stripchat] %sp" % alto, enlace + cabeceras])
+
+        if not video_urls:
+            logger.info("stripchat: ninguna variante responde, se entrega el master")
+            video_urls.append(["[stripchat]", base + cabeceras])
+        return video_urls
     
-    # isBlocked = data['isBlocked']
-    # status = data['status']
-    # isLive = data['isLive']
+    data = data["item"]
     
     if data['settings'].get('presets', ''):
         datos = httptools.downloadpage(vid, **kwargs).data
@@ -63,7 +99,7 @@ def get_video_url(page_url, video_password):
             for quality, url in matches_m3u8:
                 ## url =urlparse.urljoin(m3u8_source,url)
                 url += "?psch=%s&pkey=%s&playlistType=lowLatency" %(psch[0],psch[1])
-                url += "|Referer=%s/&Origin=%s" % (host, host)
+                url = alfa_urlparse.add_url_headers(url, {'Referer': u'{}/'.format(u'{}'.format(host)), 'Origin': u'{}'.format(host)})
                 # url += "|Referer=%s/" % host
                 video_urls.append(["[stripchat] %sp" % quality, url])
     

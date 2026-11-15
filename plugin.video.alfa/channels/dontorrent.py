@@ -3,6 +3,7 @@
 # -*- Created for Alfa-addon -*-
 # -*- By the Alfa Develop Group -*-
 
+from core import urlparse as alfa_urlparse
 import sys
 PY3 = False
 if sys.version_info[0] >= 3: PY3 = True; unicode = str; unichr = chr; long = int; _dict = dict
@@ -29,68 +30,14 @@ debug = config.get_setting('debug_report', default=False)
 canonical = {
              'channel': 'dontorrent', 
              'host': config.get_setting("current_host", 'dontorrent', default=''), 
-             'host_alt': ["https://dontorrent.management/", 
-                          "https://todotorrents.org/", "https://elitedivx.net/", "https://divxatope.net/", "https://reinventorrent.org"], 
-             'host_alt_new': ["https://dontorrent.management/"], 
-             'host_black_list': ["https://dontorrent.review/", "https://dontorrent.support/", "https://dontorrent.science/", 
-                                 "https://dontorrent.rocks/", "https://dontorrent.racing/", "https://lilatorrent.com/", 
-                                 "https://dontorrent.reisen/", "https://dontorrent.pink/", "https://dontorrent.cfd/", 
-                                 "https://dontorrent.photos/", "https://dontorrent.promo/", "https://dontorrent.info/", 
-                                 "https://dontorrent.prof/", "https://dontorrent.club/", "https://www21.dontorrent.link/", 
-                                 "https://dontorrent.sarl/", "https://dontorrent.gripe/", "https://reinventorrent.org/", 
-                                 "https://dontorrent.phd/", "https://dontorrent.live/", "https://dontorrent.kiwi/", 
-                                 "https://dontorrent.kids/", "https://dontorrent.onl/", "https://dontorrent.istanbul/", 
-                                 "https://dontorrent.lighting/", "https://dontorrent.irish/", "https://dontorrent.international/", 
-                                 "https://dontorrent.graphics/", "https://www20.dontorrent.link/", "https://dontorrent.loan/", 
-                                 "https://www19.dontorrent.link/", "https://dontorrent.jetzt/", "https://dontorrent.institute/", 
-                                 "https://dontorrent.news/", "https://dontorrent.haus/", "https://dontorrent.homes/", 
-                                 "https://dontorrent.report/", "https://dontorrent.gift/", "https://dontorrent.download/", 
-                                 "https://mastorrents.net/", "https://dontorrent.group/", "https://dontorrent.website/",
-                                 "https://dontorrent.stream/", "https://dontorrent.schule/", "https://www18.dontorrent.link/", 
-                                 "https://dontorrent.webcam/", "https://dontorrent.trade/", "https://dontorrent.tube/", 
-                                 "https://dontorrent.games/", "https://dontorrent.wiki/", "https://dontorrent.football/", 
-                                 "https://dontorrent.auction/", "https://dontorrent.co/", "https://dontorrent.foundation/", 
-                                 "https://www17.dontorrent.link/", "https://dontorrent.yoga/", "https://tomadivx.net/", 
-                                 "https://dontorrent.gallery/", "https://www16.dontorrent.link/", "https://dontorrent.fashion/", 
-                                 "https://dontorrent.equipment/", "https://www15.dontorrent.link/", "https://dontorrent.gratis/", 
-                                 "https://www15.dontorrent.link/", "https://dontorrent.faith/", "https://dontorrent.exposed/", 
-                                 "https://dontorrent.education/", "https://dontorrent.email/", "https://dontorrent.date/", 
-                                 "https://dontorrent.earth/", "https://dontorrent.cricket/", "https://dontorrent.dance/", 
-                                 "https://dontorrent.cologne/", "https://dontorrent.city/", "https://dontorrent.esq/", 
-                                 "https://dontorrent.cc/", "https://dontorrent.sbs/", "https://dontorrent.fyi/", 
-                                 "https://dontorrent.icu/", "https://dontorrent.clothing/", "https://dontorrent.business/", 
-                                 "https://dontorrent.miami/", "https://dontorrent.boutique/", "https://dontorrent.directory/", 
-                                 "https://dontorrent.skin/", "https://dontorrent.agency/", "https://www2.dontorrent.fr/", 
-                                 "https://dontorrent.cyou/", "https://dontorrent.cooking/", "https://dontorrent.center/", 
-                                 "https://dontorrent.band/", "https://dontorrent.makeup/", "https://dontorrent.yokohama/", 
-                                 "https://dontorrent.capetown/", "https://dontorrent.cymru/", "https://dontorrent.contact/", 
-                                 "https://dontorrent.nagoya/", "https://dontorrent.wales/", "https://dontorrent.joburg/", 
-                                 "https://dontorrent.party/", "https://dontorrent.durban/", "https://dontorrent.rodeo/",
-                                 "https://dontorrent.boston/", "https://dontorrent.tokyo/", "https://dontorrent.bond/",
-                                 'https://dontorrent.nexus/', "https://dontorrent.quest/", "https://dontorrent.rsvp/", "https://dontorrent.hair/", 
-                                 "https://dontorrent.foo/", "https://dontorrent.boo/", "https://dontorrent.day/", 
-                                 "https://dontorrent.mov/", 'https://dontorrent.zip/', 'https://dontorrent.dad/', 
-                                 'https://dontorrent.discount/', 'https://dontorrent.company/', 'https://dontorrent.observer/', 
-                                 'https://dontorrent.cash/', 'https://dontorrent.care/', 'https://dontorrent.ms/', 
-                                 'https://dontorrent.pictures/', 'https://dontorrent.cloud/', 'https://dontorrent.africa/', 
-                                 'https://dontorrent.love/', 'https://dontorrent.ninja/', 'https://dontorrent.plus/', 
-                                 'https://dontorrent.chat/', 'https://dontorrent.casa/', 'https://dontorrent.how/', 
-                                 'https://dontorrent.surf/', 'https://dontorrent.beer/', 'https://dontorrent.blue/', 
-                                 'https://dontorrent.army/', 'https://dontorrent.mba/', 'https://dontorrent.futbol/', 
-                                 'https://dontorrent.fail/', 'https://dontorrent.click/', 'https://dontorrent.gy/',
-                                 'https://dontorrent.gs/', 'https://dontorrent.me/', 'https://dontorrent.ltd/', 
-                                 'https://dontorrent.fans/', 'https://dontorrent.uno/', 'https://dontorrent.ist/', 
-                                 'https://dontorrent.vin/', 'https://dontorrent.tf/', 'https://dontorrent.pub/', 
-                                 'https://dontorrent.moe/', 'https://dontorrent.soy/', 'https://dontorrent.pet/', 
-                                 'https://dontorrent.bid/', 'https://dontorrent.dev/', 'https://dontorrent.dog/', 
-                                 'https://dontorrent.vet/', 'https://dontorrent.ch/', 'https://dontorrent.vg/', 
-                                 'https://dontorrent.yt/', 'https://dontorrent.tw/', 'https://dontorrent.kim/', 
-                                 'https://dontorrent.ink/', 'https://dontorrent.fi/', 'https://dontorrent.wtf/', 
-                                 'https://dontorrent.cab/', 'https://dontorrent.bet/', 'https://dontorrent.cx/', 
-                                 'https://dontorrent.nl/', 'https://dontorrent.tel/', 'https://dontorrent.pl/', 
-                                 'https://dontorrent.cat/', 'https://dontorrent.run/', 'https://dontorrent.wf/', 
-                                 'https://dontorrent.pm/', 'https://dontorrent.top/', "https://dontorrent.re/",
-                                 "https://todotorrents.net/", "https://verdetorrent.com/", "https://dontorrent.in/"], 
+             'host_alt': ["https://dontorrent.shopping/"], 
+             'host_alt_new': ["https://dontorrent.shopping/"], 
+             'host_black_list': ["https://dontorrent.tips/", "https://dontorrent.diy/", "https://dontorrent.channel/",
+                                 "https://dontorrent.meme/", "https://dontorrent.moi/", "https://divxatope.net/", 
+                                 "https://dontorrent.supply/", "https://dontorrent.soccer/", "https://dontorrent.management/", 
+                                 "https://dontorrent.review/", "https://dontorrent.support/", "https://dontorrent.science/", 
+                                 "https://dontorrent.rocks/", "https://dontorrent.racing/", "https://lilatorrent.com/"
+                                 ], 
              'pattern_proxy': r'<a[^>]*class="text-white[^"]+"\s*style="font-size[^"]+"\s*href="([^"]+)"[^>]*>\s*Descargar\s*<\/a>', 
              'proxy_url_test': 'pelicula/25159/The-Batman', 
              'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
@@ -129,7 +76,7 @@ finds = {'find': {'find_all': [{'tag': ['div'], 'class': ['text-center']}]},
          'next_page': {}, 
          'next_page_rgx': [[r'\/page\/\d+', '/page/%s'], [r'&pagina=\d+', '&pagina=%s'], [r'&p=\d+', '&p=%s']], 
          'last_page': dict([('find', [{'tag': ['ul'], 'class': ['pagination']}]), 
-                            ('find_all', [{'tag': ['a'], '@POS': [-2]}]), 
+                            ('find_all', [{'tag': ['li'], '@POS': [-2]}]), 
                             ('get_text', [{'tag': '', '@STRIP': True, '@TEXT': r'(\d+)'}])]), 
          'year': {}, 
          'season_episode': {}, 
@@ -167,7 +114,7 @@ AlfaChannel = DictionaryAllChannel(host, movie_path=movie_path, tv_path=tv_path,
                                    list_quality_movies=list_quality_movies, list_quality_tvshow=list_quality_tvshow, 
                                    channel=canonical['channel'], actualizar_titulos=True, url_replace=url_replace, debug=debug)
 if host != canonical['host'] and channel in canonical['host']: canonical['host_alt_new'][0] = canonical['host']
-host_new = True if canonical.get('host', 'xyz') in canonical.get('host_alt_new', []) else False
+host_new = True if canonical.get('host', 'xyz') in canonical.get('host_alt_new', []) else True
 debug = debug or canonical.get('print_DEBUG', False)
 
 
@@ -239,7 +186,7 @@ def submenu(item):
                                              ['Documentales', 'documentary', 'series']]:
 
             itemlist.append(Item(channel=item.channel, title=novedad, action="list_all", 
-                                 url=host + "ultimos", thumbnail=get_thumb("channels_%s.png" % contentType), 
+                                 url=alfa_urlparse.build_url(host, 'ultimos'), thumbnail=get_thumb("channels_%s.png" % contentType),
                                  c_type=c_type, extra="novedades", category=categoria))
 
         itemlist.append(Item(channel=item.channel, title='Buscar...', action="search", 
@@ -288,30 +235,30 @@ def submenu(item):
             if 'descargar-' in url: 
                 url = url.replace('descargar-', '')
             itemlist.append(Item(channel=item.channel, title=title, action="list_all", 
-                                 url=url+'/page/1', thumbnail=get_thumb("channels_%s%s.png" % (contentType, '_hd' if quality else '')), 
+                                 url=alfa_urlparse.build_url(url, '/page/1'), thumbnail=get_thumb("channels_%s%s.png" % (contentType, '_hd' if quality else '')),
                                  c_type=item.c_type, quality=quality, category=categoria))
 
             if item.c_type != 'peliculas' and not host_new:                     # Para todo, menos películas
                 itemlist.append(Item(channel=item.channel, title=' - [COLOR paleturquoise]Por [A-Z][/COLOR]', action="section", 
-                                     url=url + "/letra-%s/page/1", thumbnail=get_thumb('channels_movie_az.png'), c_type=item.c_type, 
+                                     url=alfa_urlparse.build_url(url, '/letra-%s/page/1'), thumbnail=get_thumb('channels_movie_az.png'), c_type=item.c_type,
                                      extra='Alfabético', quality=quality, category=categoria))
 
             elif title == '[B]Películas[/B]':                                   # Categorías sólo de películas
                 itemlist.append(Item(channel=item.channel, title=' - [COLOR paleturquoise]Por [A-Z][/COLOR]', action="section", 
-                                     url=url + "/buscar", thumbnail=get_thumb('channels_movie_az.png'), c_type=item.c_type, 
+                                     url=alfa_urlparse.build_url(url, '/buscar'), thumbnail=get_thumb('channels_movie_az.png'), c_type=item.c_type,
                                      extra='Alfabético', quality=quality, category=categoria, post=post_alfabeto))
 
                 itemlist.append(Item(channel=item.channel, title=' - [COLOR paleturquoise]Por Género[/COLOR]', action="section", 
-                                     url=url+'/page/1', thumbnail=get_thumb('genres.png'), c_type=item.c_type, 
-                                     extra='Géneros', category=categoria, info=[url + "/buscar", post_genero, 'valor2']))
+                                     url=alfa_urlparse.build_url(url, '/page/1'), thumbnail=get_thumb('genres.png'), c_type=item.c_type,
+                                     extra='Géneros', category=categoria, info=[alfa_urlparse.build_url(url, '/buscar'), post_genero, 'valor2']))
 
                 itemlist.append(Item(channel=item.channel, title=' - [COLOR paleturquoise]Por Año[/COLOR]', action="section", 
-                                     url=url + "/buscar", thumbnail=get_thumb('years.png'), c_type=item.c_type, 
+                                     url=alfa_urlparse.build_url(url, '/buscar'), thumbnail=get_thumb('years.png'), c_type=item.c_type,
                                      extra='Year', category=categoria, post=post_anno))
 
                 itemlist.append(Item(channel=item.channel, title=' - [COLOR paleturquoise]Por Calidad[/COLOR]', action="section", 
-                                     url=url+'/page/1', thumbnail=get_thumb('search_star.png'), c_type=item.c_type, 
-                                     extra='Quality', category=categoria, info=[url + "/buscar", post_calidad, 'valor5']))
+                                     url=alfa_urlparse.build_url(url, '/page/1'), thumbnail=get_thumb('search_star.png'), c_type=item.c_type,
+                                     extra='Quality', category=categoria, info=[alfa_urlparse.build_url(url, '/buscar'), post_calidad, 'valor5']))
 
     return itemlist
 
@@ -395,6 +342,7 @@ def list_all(item):
         findS['find'] = {'find_all': [{'tag': ['div'], 'class': ['card shadow-sm p-4', 'card shadow-sm']}]}
 
         if host_new: findS['controls'].update({'force_find_last_page': [3, 999, 'post']})
+        findS['controls']['cnt_tot'] = 10
     
     return AlfaChannel.list_all(item, matches_post=list_all_matches, generictools=True, finds=findS, **kwargs)
 
@@ -510,23 +458,19 @@ def list_all_matches(item, matches_int, **AHkwargs):
                 items_found = 0
             items_found_save = items_found
 
-            for elem_a in elem.find_all('p'):
+            for elem_a in elem.find_all('li'):
                 elem_json = {}
                 #logger.error(elem_a)
 
                 try:
                     if not elem_a.find('a'): continue
                     elem_json['url'] = elem_a.find('a').get("href", "")
-                    if items_found > 0: items_found -= 1
                     if movie_path not in elem_json['url'] and tv_path not in elem_json['url'] and docu_path not in elem_json['url']: continue
-                    if movie_path in elem_json['url']:
-                        elem_json['title'] = (elem_a.get_text('|').split('|')[0] + elem_a.get_text('|').split('|')[1]).rstrip('.')
-                        elem_json['quality'] = '*%s' % scrapertools.find_single_match(elem_a.get_text('|').split('|')[-2], 
-                                                                                                      r'\((.*?)\)').replace('Ninguno', '')
-                    else:
-                        elem_json['title'] = re.sub(r'(?i)\s*\(.*?\).*?$', '', elem_a.get_text()).rstrip('.')
-                        elem_json['quality'] = '*%s' % scrapertools.find_single_match(elem_a.get_text(), r'\((.*?)\)').replace('Ninguno', '')
-                        elem_json['quality'] = 'HDTV-720p' if '720p' in elem_json['quality'] else 'HDTV'
+                    if items_found > 0: items_found -= 1
+                    elem_json['title'] = scrapertools.find_single_match(elem_a.get_text('|', strip=True), r'([^$]+)\|\(')\
+                                                                              .replace('|', ' ').rstrip('.').strip()
+                    elem_json['quality'] = '*%s' % scrapertools.find_single_match(elem_a.get_text('|', strip=True).split('|')[-2], 
+                                                                                                  r'\((.*?)\)').replace('Ninguno', '')
                     if '3d' in elem_json['title'].lower() and '3d' not in elem_json['quality'].lower():
                         elem_json['quality'] = '%s,3d' % elem_json['quality']
                     elem_json['language'] = '*'
@@ -541,11 +485,9 @@ def list_all_matches(item, matches_int, **AHkwargs):
 
                 matches.append(elem_json.copy())
 
-            """
             if AlfaChannel.last_page in [9999, 99999] and items_found:
-                AlfaChannel.last_page = int(float(items_found_save / float(findS['controls']['cnt_tot'])  + 0.500009))
+                AlfaChannel.last_page = int((float(items_found_save) / float(findS['controls']['cnt_tot']))  + 0.99)
                 AlfaChannel.cnt_tot = items_found_save
-            """
 
         elif item.c_type in ['peliculas', 'series']:
             for elem_a in elem.find_all('a'):
@@ -774,7 +716,7 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
                     elem_json['url'] = elem.find('a', class_='bg-primary').get('href', '')
 
                 elif elem.find('a', class_='bg-primary') and elem.find('a', class_='bg-primary').get('data-content-id'):
-                    elem_json['url'] = host + torrent_path
+                    elem_json['url'] = alfa_urlparse.urljoin(host, torrent_path)
                     elem_json['info'] = item.info or '{"action":"generate","content_id":%s,"tabla":"%s"}' \
                                                       % (int(elem.find('a', class_='bg-primary').get('data-content-id', 0)), 
                                                          elem.find('a', class_='bg-primary').get('data-tabla', 'peliculas'))
@@ -867,15 +809,15 @@ def search(item, texto, **AHkwargs):
     kwargs.update(AHkwargs)
 
     host_new = True if canonical['host'] in canonical.get('host_alt_new', []) else False
-    texto = texto.replace(" ", "%20")
+    texto = texto.replace(" ", "+")
 
     try:
         if texto:
             if item.btdigg: item.btdigg = texto
             if not host_new:
-                item.url = item.referer = host + 'buscar/' + texto
+                item.url = item.referer = alfa_urlparse.build_url(host, u'buscar/{}'.format(texto))
             else:
-                item.url = item.referer = host + 'buscar'
+                item.url = item.referer = alfa_urlparse.build_url(host, 'buscar')
                 item.post = 'valor=%s&Buscar=Buscar&p=1' % texto
             item.c_type = "search"
             item.texto = texto
@@ -902,7 +844,7 @@ def newest(categoria, **AHkwargs):
 
     try:
         if categoria in ['peliculas', 'series']:
-            item.url = host + "ultimos"
+            item.url = alfa_urlparse.build_url(host, 'ultimos')
             item.c_type = categoria
             item.extra = "novedades"
             item.action = "list_all"

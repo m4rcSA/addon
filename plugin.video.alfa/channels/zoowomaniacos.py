@@ -3,6 +3,7 @@
 # -*- Created for Alfa-addon -*-
 # -*- By the Alfa Develop Group -*-
 
+from core import urlparse as alfa_urlparse
 import sys
 PY3 = False
 if sys.version_info[0] >= 3: PY3 = True; unicode = str; unichr = chr; long = int; _dict = dict
@@ -45,9 +46,11 @@ tv_path = '/serie'
 language = []
 url_replace = []
 
-finds = {'findvideos': dict([('find', [{'tagOR': ['div'], 'id': ['playeroptions']}, 
-                                       {'tag': ['ul'], 'class': ['options']}]), 
-                             ('find_all', [{'tag': 'li'}])]), 
+finds = {
+         # 'findvideos': dict([('find', [{'tagOR': ['div'], 'id': [re.compile(r"^option-\d+")]}, 
+                                       # {'tag': ['ul'], 'class': ['options']}]), 
+                             # ('find_all', [{'tag': 'li'}])]), 
+         'findvideos': {'find_all': [{'tag': ['div'], 'id': [re.compile(r"^option-\d+")]}]}, 
          'get_language_rgx': '(?:flags\/|-)(\w+)\.(?:png|jpg|jpeg|webp)', 
          'controls': {'duplicates': [], 'min_temp': False, 'url_base64': False, 'add_video_to_videolibrary': True, 
                       'get_lang': False, 'reverse': False, 'videolab_status': True, 
@@ -140,7 +143,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
 
     for elem in matches_int.get("matches", {}):
         elem_json = {}
-
+        
         elem_json['title'] = elem.get("a2", "").split("-")[0].strip()
         elem_json['url'] = item.url or host
         lang = scrapertools.find_single_match(elem.get("a8", ""), findS['get_language_rgx']) \
@@ -150,7 +153,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
         elem_json['quality'] = '*'
         elem_json['info'] = {'v_id': elem.get("a1", "0")}
         elem_json['plot'] = elem.get("a100", "")
-        elem_json['thumbnail'] = "%swp/wp-content/uploads/%s" % (host, elem.get("a8", ""))
+        elem_json['thumbnail'] = alfa_urlparse.build_url(host, u'wp/wp-content/uploads/{}'.format(elem.get("a8", "")))
         if ('tmdb' in elem_json['thumbnail'] or 'imdb' in elem_json['thumbnail']) and '=http' in elem_json['thumbnail']:
             elem_json['thumbnail'] = scrapertools.find_single_match(AlfaChannel.do_unquote(elem_json['thumbnail']), '=(.*?)[&|$]')
         elem_json['year'] = elem.get("a4", "-")
@@ -168,7 +171,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
 def findvideos(item):
     logger.info()
 
-    base_url = "https://proyectox.yoyatengoabuela.com/testplayer.php?id=%s" % item.info.get('v_id', '0')
+    base_url = alfa_urlparse.build_url('https://proyectox.yoyatengoabuela.com', '/testplayer.php', query=[('id', u'{}'.format(item.info.get('v_id', '0')))])
     
     return AlfaChannel.get_video_options(item, base_url, matches_post=findvideos_matches, 
                                          verify_links=False, findvideos_proc=True, **kwargs)
@@ -176,29 +179,29 @@ def findvideos(item):
 
 def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
     logger.info()
-
     matches = []
+    
     findS = AHkwargs.get('finds', finds)
+    
     soup = AHkwargs.get('soup', {})
-    servers = {'drive': 'gvideo', 'fembed': 'fembed', "player": "oprem", "openplay": "oprem", "embed": "mystream"}
-
-    for elem in matches_int[1:]:
+    flags = soup.find('ul', class_='idTabs').find_all('img')
+    
+    for elem, flag in zip(matches_int, flags): 
         elem_json = {}
-
-        elem_json['server'] = elem.get('cyberlocker', '')
-        elem_json['url'] = soup.find("div", id=elem.a.get("href", "")[1:]).iframe.get("src", "")
-        lang = scrapertools.find_single_match(elem.img.get("src", ''), findS['get_language_rgx']) \
-                            if findS['controls']['get_lang'] else ''
-        if lang.lower() in ["ar", "mx", "pe", "cl", "co"]: lang = "la"
-        elem_json['language'] = IDIOMAS.get(lang, '*%s' % lang)
-        elem_json['quality'] = '*%s' % elem.get('quality', '')
-        elem_json['title'] = '%s'
+        
+        try:
+            elem_json['url'] = elem.iframe.get("src", "")
+            lang = scrapertools.find_single_match(flag['src'], 'flags\/([a-z]{2})\.png')
+            if lang.lower() in ["ar", "mx", "pe", "cl", "co"]: lang = "la"
+            # elem_json['language'] = IDIOMAS.get(lang, '*%s' % lang)
+            elem_json['language'] = lang
+        except Exception:
+            logger.error(server)
+            logger.error(elem)
+            logger.error(traceback.format_exc())
+            continue
 
         if not elem_json['url']: continue
-
-        if elem_json['server'].lower() in ["waaw", "jetload"]: continue
-        if elem_json['server'].lower() in servers:
-           elem_json['server'] = servers[elem_json['server'].lower()]
 
         matches.append(elem_json.copy())
 
@@ -228,7 +231,7 @@ def search(item, texto, **AHkwargs):
         else:
             return []
     # Se captura la excepción, para no interrumpir al buscador global si un canal falla
-    except:
+    except Exception:
         for line in sys.exc_info():
             logger.error("%s" % line)
         return []
