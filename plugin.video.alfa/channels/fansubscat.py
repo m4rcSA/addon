@@ -70,7 +70,7 @@ def list_all(item):
         # /slug/nom-del-fansub (p. ex. /ao-ashi/projecte-h3aso3).
         seen = set()
         for attrs, body in re.findall(
-                r'<a\\b([^>]*href=["\\']([^"\\']+)["\\'][^>]*)>(.*?)</a>',
+                r'<a\b([^>]*href=["\']([^"\']+)["\'][^>]*)>(.*?)</a>',
                 data, re.I | re.S):
             url = _absolute(_attr(attrs, "href"))
             if not _is_detail_url(url) or url in seen:
@@ -80,7 +80,7 @@ def list_all(item):
             # Els enllaços "Mira'l ara" no contenen el títol: fem servir el slug.
             if not label or label.lower().startswith(("mira", "obre")):
                 label = _slug_title(url)
-            img = re.search(r'<img\\b[^>]*>', body, re.I | re.S)
+            img = re.search(r'<img\b[^>]*>', body, re.I | re.S)
             thumb = _attr(img.group(0), "src") if img else ""
             itemlist.append(Item(channel=item.channel, action="episodios",
                                  title=label, url=url,
@@ -106,7 +106,7 @@ def newest(item):
         block = section.group(1) if section else data
         seen = set()
         for attrs, href, body in re.findall(
-                r'<a\\b([^>]*href=["\\']([^"\\']+)["\\'][^>]*)>(.*?)</a>',
+                r'<a\b([^>]*href=["\']([^"\']+)["\'][^>]*)>(.*?)</a>',
                 block, re.I | re.S):
             label = _clean(body)
             url = _absolute(href)
