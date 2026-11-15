@@ -50,39 +50,50 @@ def _absolute(url):
     return urlparse.urljoin(host, url or "")
 
 
+def _is_detail_url(url):
+    path = urlparse.urlparse(url).path.strip("/")
+    parts = [p for p in path.split("/") if p]
+    return len(parts) == 2 and parts[0] not in ("cerca", "categoria", "tags", "page")
+
+
+def _slug_title(url):
+    slug = urlparse.urlparse(url).path.strip("/").split("/")[0]
+    return re.sub(r"[-_]+", " ", slug).strip().title()
+
+
 def list_all(item):
     logger.info()
     itemlist = []
     try:
         data = _download(item.url or host).data
-        # Les targetes del catàleg enllacen directament a fitxes /slug/catsub.
-        pattern = r'<a\b([^>]*href=["\'][^"\']+/catsub[^"\']*["\'][^>]*)>(.*?)</a>'
+        # El portal ja no fa servir /slug/catsub: les fitxes són
+        # /slug/nom-del-fansub (p. ex. /ao-ashi/projecte-h3aso3).
         seen = set()
-        for attrs, body in re.findall(pattern, data, re.I | re.S):
+        for attrs, body in re.findall(
+                r'<a\\b([^>]*href=["\\']([^"\\']+)["\\'][^>]*)>(.*?)</a>',
+                data, re.I | re.S):
             url = _absolute(_attr(attrs, "href"))
-            if url in seen:
+            if not _is_detail_url(url) or url in seen:
                 continue
             seen.add(url)
-            img = re.search(r'<img\b[^>]*>', body, re.I | re.S)
-            title = _attr(img.group(0), "alt") if img else ""
+            label = _clean(body)
+            # Els enllaços "Mira'l ara" no contenen el títol: fem servir el slug.
+            if not label or label.lower().startswith(("mira", "obre")):
+                label = _slug_title(url)
+            img = re.search(r'<img\\b[^>]*>', body, re.I | re.S)
             thumb = _attr(img.group(0), "src") if img else ""
-            if not title:
-                title = _clean(body)
-            if not title:
-                continue
-            itemlist.append(Item(channel=item.channel, action="episodios", title=title,
-                                 url=url, thumbnail=_absolute(thumb) if thumb else "",
-                                 contentSerieName=title, contentType="tvshow"))
-        if not itemlist:
-            logger.debug("Fansubs.cat: no s'han trobat targetes al catàleg")
+            itemlist.append(Item(channel=item.channel, action="episodios",
+                                 title=label, url=url,
+                                 thumbnail=_absolute(thumb) if thumb else "",
+                                 contentSerieName=label, contentType="tvshow"))
     except Exception:
         logger.error(traceback.format_exc())
+    logger.debug("Fansubs.cat: %d fitxes trobades" % len(itemlist))
     return itemlist
 
 
 def newest(item):
     logger.info()
-    # El agregador de novedades pasa una categoría; el menú pasa un Item.
     if not isinstance(item, Item):
         if item != "anime":
             return []
@@ -90,22 +101,26 @@ def newest(item):
     itemlist = []
     try:
         data = _download(host).data
-        # Darrers capítols: els enllaços de capítol apunten a fitxes d'anime.
-        section = re.search(r'Darrers cap[ií]tols(.*?)(?:Animes d|<footer)', data, re.I | re.S)
+        section = re.search(r'Darrers cap[ií]tols publicats(.*?)(?:Animes d|<footer)',
+                            data, re.I | re.S)
         block = section.group(1) if section else data
         seen = set()
-        for href, title in re.findall(r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', block, re.I | re.S):
-            label = _clean(title)
-            if not label or "cap." not in label.lower() or "/catsub" not in href:
-                continue
+        for attrs, href, body in re.findall(
+                r'<a\\b([^>]*href=["\\']([^"\\']+)["\\'][^>]*)>(.*?)</a>',
+                block, re.I | re.S):
+            label = _clean(body)
             url = _absolute(href)
+            if not label or "cap." not in label.lower() or not _is_detail_url(url):
+                continue
             if url in seen:
                 continue
             seen.add(url)
-            itemlist.append(Item(channel=item.channel, action="episodios", title=label,
-                                 url=url, contentSerieName=label, contentType="tvshow"))
+            itemlist.append(Item(channel=item.channel, action="episodios",
+                                 title=label, url=url,
+                                 contentSerieName=_slug_title(url), contentType="tvshow"))
     except Exception:
         logger.error(traceback.format_exc())
+    logger.debug("Fansubs.cat: %d darrers capítols trobats" % len(itemlist))
     return itemlist
 
 
