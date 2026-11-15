@@ -69,10 +69,10 @@ def list_all(item):
         # El portal ja no fa servir /slug/catsub: les fitxes són
         # /slug/nom-del-fansub (p. ex. /ao-ashi/projecte-h3aso3).
         seen = set()
-        for attrs, body in re.findall(
+        for attrs, href, body in re.findall(
                 r'<a\b([^>]*href=["\']([^"\']+)["\'][^>]*)>(.*?)</a>',
                 data, re.I | re.S):
-            url = _absolute(_attr(attrs, "href"))
+            url = _absolute(href)
             if not _is_detail_url(url) or url in seen:
                 continue
             seen.add(url)
